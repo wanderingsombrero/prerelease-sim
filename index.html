@@ -127,6 +127,8 @@ aside{background:var(--felt);border:1px solid var(--line);border-radius:8px;padd
 .btn-copy:hover{background:var(--holo);color:var(--ink)}
 #fallback{width:100%;height:150px;font-family:var(--mono);font-size:13px;background:var(--ink);
   color:var(--parch);border:1px solid var(--line);border-radius:5px;padding:8px;resize:vertical}
+.linkbtn{font-family:var(--mono);font-size:13px;background:none;border:none;padding:0;
+  color:var(--holo);cursor:pointer;text-decoration:underline;letter-spacing:.06em}
 .sortbtn{font-family:var(--mono);font-size:12px;padding:4px 9px;border-radius:4px;cursor:pointer;
   background:transparent;color:var(--mute);border:1px solid var(--line)}
 .sortbtn.on{background:var(--stamp);color:var(--ink);border-color:var(--stamp)}
@@ -149,8 +151,7 @@ footer{font-family:var(--mono);font-size:11px;color:var(--mute);margin-top:48px;
 
 <header>
   <div>
-    <h1>Prerelease</h1>
-    <p class="tag">SEALED POOL SIMULATOR · SIX PACKS · BUILD FORTY</p>
+  <a href="index.html"><h1>PRERELEASE ONLINE</h1></a>
   </div>
   <div class="setmeta" id="setmeta"></div>
 </header>
@@ -201,6 +202,9 @@ async function fetchAllPages(url, onProgress){
 /* ---------- collation ---------- */
 const MYTHIC_ERA = "2008-10-03";  // Shards of Alara — mythics introduced
 const PLAY_ERA   = "2024-02-09";  // Murders at Karlov Manor — Play Boosters
+const EARLY_ERA  = "1995-06-03";  // Ice Age — before this, pack sizes were all over the place
+                                  // (8-card Arabian Nights/Antiquities/Fallen Empires/Homelands,
+                                  //  Chronicles printed at a single rarity, etc.)
 
 const eraFor = d => !d ? "draft" : d >= PLAY_ERA ? "play" : d >= MYTHIC_ERA ? "draft" : "classic";
 const ERA_LABEL = { play:"Play Booster", draft:"Draft Booster", classic:"Draft Booster (pre-mythic)" };
@@ -299,7 +303,7 @@ const S = {
   pools:null, packs:[], opened:[], promo:null,
   includePromo:true, packCount:6,
   deck:new Set(), basics:{Plains:0,Island:0,Swamp:0,Mountain:0,Forest:0},
-  sort:"color", exportCodes:false, copyMsg:"", tile:200, approx:false
+  sort:"color", exportCodes:false, copyMsg:"", tile:200, approx:false, eraFilter:"all", showAll:false
 };
 
 const app = document.getElementById("app");
@@ -535,10 +539,23 @@ function render(){
     'PACK CONTENTS ARE APPROXIMATED FROM PUBLISHED SLOT STRUCTURES — NOT OFFICIAL COLLATION.</footer>');
 }
 
+const ERA_FILTERS = [
+  ["all",     "All sets"],
+  ["play",    "Play Booster"],
+  ["draft",   "Draft Booster"],
+  ["classic", "Pre-mythic"]
+];
+
 function renderPick(){
   const q = S.query.trim().toLowerCase();
-  const list = !q ? S.sets.slice(0,40)
-    : S.sets.filter(s => s.name.toLowerCase().indexOf(q) !== -1 || s.code.indexOf(q) !== -1).slice(0,40);
+  const list = S.sets.filter(s => {
+    if(S.eraFilter !== "all" && eraFor(s.released_at) !== S.eraFilter) return false;
+    if(!q) return true;
+    return s.name.toLowerCase().indexOf(q) !== -1 || s.code.indexOf(q) !== -1;
+  });
+  const LIMIT  = 40;
+  const shown  = S.showAll ? list : list.slice(0, LIMIT);
+  const hidden = list.length - shown.length;
 
   app.innerHTML =
     '<div class="eyebrow">01 — Choose a set</div>' +
@@ -546,10 +563,19 @@ function renderPick(){
     '<div class="row" style="margin-bottom:18px">' +
       '<input type="text" id="search" placeholder="Search sets by name or code…" value="'+esc(S.query)+'">' +
       '<button class="btn-ghost" id="refresh" title="Set data is cached 24h — refresh if a brand-new set is missing">Refresh data</button></div>' +
-    (!S.sets.length && !S.setsError ? '<p class="note">Loading sets…</p>' : '') +
-    '<div class="setgrid">' + list.map(s =>
+    '<div class="row" style="gap:6px;margin-bottom:14px">' +
+      ERA_FILTERS.map(f => '<button class="sortbtn'+(S.eraFilter===f[0]?" on":"")+'" data-era="'+f[0]+'">'+
+        f[1]+'</button>').join("") + '</div>' +
+    (!S.sets.length && !S.setsError ? '<p class="note">Loading sets…</p>'
+      : '') +
+    (!S.sets.length ? '' :
+      '<p class="note">SHOWING '+shown.length+' OF '+list.length+
+      (S.eraFilter!=="all"?" IN THIS ERA":" SETS")+
+      (hidden > 0 ? ' · SEARCH BY NAME OR CODE FOR THE OTHER '+hidden+
+        ', OR <button class="linkbtn" id="showall">SHOW ALL</button>' : '')+'</p>') +
+    '<div class="setgrid">' + shown.map(s =>
       '<button class="setbtn" data-code="'+esc(s.code)+'">' +
-        (s.icon_svg_uri ? '<img src="'+esc(s.icon_svg_uri)+'" alt="">' : '') +
+        (s.icon_svg_uri ? '<img src="'+esc(s.icon_svg_uri)+'" alt="" loading="lazy">' : '') +
         '<span style="min-width:0"><span class="nm">'+esc(s.name)+'</span>' +
         '<span class="cd">'+esc(s.code.toUpperCase())+' · '+esc(s.released_at||"")+' · '+
         esc(ERA_LABEL[eraFor(s.released_at)].split(" ")[0])+'</span></span></button>'
@@ -563,6 +589,10 @@ function renderPick(){
     const n = document.getElementById("search");
     n.focus(); n.setSelectionRange(pos,pos);
   });
+  Array.prototype.forEach.call(app.querySelectorAll("[data-era]"), b =>
+    b.addEventListener("click", () => { S.eraFilter = b.dataset.era; S.showAll = false; render(); }));
+  const sa = document.getElementById("showall");
+  if(sa) sa.addEventListener("click", () => { S.showAll = true; render(); });
   document.getElementById("refresh").addEventListener("click", () => {
     clearCache();
     S.sets = []; S.setsError = null; render();
@@ -582,6 +612,9 @@ function renderKit(){
       '<p class="note">COMMONS '+p.common.length+' · UNCOMMONS '+p.uncommon.length+
         ' · RARES '+p.rare.length+' · MYTHICS '+p.mythic.length+
         '<br>COLLATION: '+esc(ERA_LABEL[era].toUpperCase())+'</p>' +
+      (S.chosen.released_at && S.chosen.released_at < EARLY_ERA ?
+        '<p class="note" style="color:var(--stamp)">⚠ PRE-1995 SET — REAL PACKS FROM THIS ERA VARIED WIDELY ' +
+        '(8-CARD PACKS, ODD RARITY SPLITS, SINGLE-RARITY PRINTINGS). THIS USES A 15-CARD APPROXIMATION.</p>' : '') +
       (S.approx ? '<p class="note" style="color:var(--stamp)">⚠ THIS SET HAS NO BOOSTER FLAGS ON SCRYFALL YET — ' +
         'POOL INCLUDES EVERY CARD IN THE SET, SO COLLECTOR-ONLY AND PROMO PRINTINGS MAY APPEAR. ' +
         'RE-PULL AFTER RELEASE DAY FOR ACCURATE PACKS.</p>' : '') +
