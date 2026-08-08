@@ -7,6 +7,7 @@
 <meta name="description" content="Simulate a Magic: The Gathering prerelease — pick a set, crack six packs, build a 40-card deck." />
 <title>Prerelease — Sealed Pool Simulator</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="stylesheet" href="https://cloudflare.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="preconnect" href="https://cards.scryfall.io" />
 <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@400;600;800&family=Karla:wght@400;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
@@ -139,19 +140,23 @@ aside{background:var(--felt);border:1px solid var(--line);border-radius:8px;padd
 #lightbox img{max-height:78vh;max-width:90vw;border-radius:12px}
 #lightbox p{font-family:var(--mono);font-size:13px;color:var(--mute);margin-top:12px;letter-spacing:.08em}
   
-  .home-button {
-  display: inline-block;
-  padding: 10px 20px;
-  background-color: #007bff;
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 45px;
+  height: 45px;
+  background-color: #333;
   color: white;
+  border-radius: 50%;
   text-decoration: none;
-  border-radius: 5px;
-  font-family: sans-serif;
-  font-weight: bold;
+  font-size: 18px;
 }
 
-.home-button:hover {
-  background-color: #0056b3;}
+.icon-button:hover {
+  background-color: #555;
+}
+
 
 footer{font-family:var(--mono);font-size:11px;color:var(--mute);margin-top:48px;padding-top:16px;
   border-top:1px solid var(--line);line-height:1.8;letter-spacing:.06em}
@@ -166,7 +171,9 @@ footer{font-family:var(--mono);font-size:11px;color:var(--mute);margin-top:48px;
 <header>
   <div>
   <h1>PRERELEASE ONLINE</h1>
-    <a href="index.html" class="home-button">Home</a>
+    <a href="/" class="icon-button" aria-label="Home">
+  <i class="fa-solid fa-house"></i>
+</a>
   </div>
   <div class="setmeta" id="setmeta"></div>
 </header>
