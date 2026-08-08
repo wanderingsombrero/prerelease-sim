@@ -106,6 +106,16 @@ aside{background:var(--felt);border:1px solid var(--line);border-radius:8px;padd
 .deckrow:hover{color:var(--bad)}
 .deckrow .mark{font-family:var(--mono);font-size:11px;width:12px}
 .deckrow .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.landbox{margin:20px 0 4px;padding:12px 14px;border:1px solid var(--stamp);border-radius:7px;
+  background:rgba(232,179,74,.05)}
+.landhead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+.landhead span:first-child{font-family:var(--disp);font-size:22px;font-weight:800;text-transform:uppercase;
+  color:var(--stamp)}
+.landnum{font-family:var(--mono);font-size:15px;color:var(--stamp)}
+.btn-fill{width:100%;margin-top:12px;font-family:var(--mono);font-size:12px;background:var(--stamp);
+  color:var(--ink);border:none;border-radius:5px;padding:9px 12px;cursor:pointer;
+  text-transform:uppercase;letter-spacing:.08em}
+.btn-fill:hover{filter:brightness(1.12)}
 .basicrow{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:15px}
 .dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
 .step{font-family:var(--mono);width:26px;height:26px;border-radius:4px;background:none;
@@ -325,7 +335,7 @@ async function loadSet(code){
   S.chosen = s; S.loadError = null; S.packs = []; S.opened = []; S.promo = null;
   S.deck = new Set(); S.basics = {Plains:0,Island:0,Swamp:0,Mountain:0,Forest:0};
 
-  const cached = cache.get("set:"+code);
+  const cached = cache.get("set2:"+code);
   if(cached){ S.pools = cached; S.approx = false; render(); return; }
 
   S.loading = true; S.loadCount = 0; render();
@@ -351,6 +361,7 @@ async function loadSet(code){
     const slim = c => ({
       id:c.id, name:c.name, rarity:c.rarity, cmc:c.cmc, set:c.set,
       collector_number:c.collector_number, type_line:c.type_line, color_identity:c.color_identity,
+      mana_cost: c.mana_cost || (c.card_faces && c.card_faces[0] ? c.card_faces[0].mana_cost : "") || "",
       image_uris: c.image_uris ? {normal:c.image_uris.normal, large:c.image_uris.large} : null,
       card_faces: c.card_faces ? c.card_faces.map(f => ({
         image_uris: f.image_uris ? {normal:f.image_uris.normal, large:f.image_uris.large} : null })) : null
@@ -377,7 +388,7 @@ async function loadSet(code){
       }catch(e){ /* non-fatal — packs work without The List */ }
     }
     S.pools = p;
-    cache.set("set:"+code, p);
+    cache.set("set2:"+code, p);
   }catch(e){ S.loadError = e.message; S.pools = null; }
   S.loading = false; render();
 }
@@ -416,6 +427,42 @@ function sortedPool(){
 }
 const basicTotal = () => Object.keys(S.basics).reduce((a,k) => a + S.basics[k], 0);
 const deckTotal  = () => S.deck.size + basicTotal();
+const deckCards  = () => poolCards().filter(c => S.deck.has(c.uid));
+const spellCount = () => deckCards().filter(c => !isLand(c)).length;
+const landCount  = () => deckCards().filter(c =>  isLand(c)).length + basicTotal();
+
+/* Distribute the remaining slots across basics in proportion to the coloured
+   mana pips in the deck's spells. Largest-remainder, so the total lands exactly. */
+const PIP_TO_BASIC = { W:"Plains", U:"Island", B:"Swamp", R:"Mountain", G:"Forest" };
+function fillToForty(){
+  const need = 40 - S.deck.size - basicTotal();
+  if(need <= 0){ S.copyMsg = "ALREADY AT 40 OR MORE"; render(); return; }
+
+  const pips = { W:0, U:0, B:0, R:0, G:0 };
+  deckCards().forEach(c => {
+    if(isLand(c)) return;
+    (c.mana_cost || "").replace(/\{([^}]+)\}/g, (m, sym) => {
+      sym.split("/").forEach(x => { if(pips[x] !== undefined) pips[x]++; });
+      return m;
+    });
+  });
+
+  const keys = Object.keys(pips).filter(k => pips[k] > 0);
+  if(!keys.length){ S.copyMsg = "ADD SOME COLOURED SPELLS FIRST"; render(); return; }
+
+  const sum = keys.reduce((a,k) => a + pips[k], 0);
+  const exact = keys.map(k => ({ k, v: need * pips[k] / sum }));
+  const out = {};
+  let placed = 0;
+  exact.forEach(e => { out[e.k] = Math.floor(e.v); placed += out[e.k]; });
+  exact.sort((a,b) => (b.v - Math.floor(b.v)) - (a.v - Math.floor(a.v)));
+  for(let i = 0; placed < need; i++, placed++) out[exact[i % exact.length].k]++;
+
+  BASICS.forEach(b => { S.basics[b[0]] = 0; });
+  keys.forEach(k => { S.basics[PIP_TO_BASIC[k]] = out[k] || 0; });
+  S.copyMsg = "";
+  render();
+}
 
 /* ---------- export ----------
    Plain "1 Card Name" lines — imports cleanly into Moxfield, Archidekt,
@@ -576,7 +623,7 @@ function tileHTML(c, i){
 
 function renderTable(){
   const pool = sortedPool(), total = deckTotal(), ok = total >= 40;
-  const deckList = poolCards().filter(c => S.deck.has(c.uid));
+  const deckList = deckCards();
 
   app.innerHTML =
     '<div class="row" style="margin-bottom:8px"><span class="eyebrow" style="margin:0">03 — Open</span>' +
@@ -601,19 +648,24 @@ function renderTable(){
     '<aside><div class="decktop"><span>Deck</span>' +
       '<span class="count'+(ok?" ok":"")+'">'+total+'/40</span></div>' +
       '<div class="bar"><div class="'+(ok?"ok":"")+'" style="width:'+Math.min(100,total/40*100)+'%"></div></div>' +
-      '<p class="note" style="margin:0 0 14px">'+(ok?"LEGAL — 40 CARD MINIMUM MET":(40-total)+" MORE TO GO")+'</p>' +
+      '<p class="note" style="margin:0 0 14px">'+(ok?"LEGAL — 40 CARD MINIMUM MET":(40-total)+" MORE TO GO")+
+        ' · '+spellCount()+' SPELLS · '+landCount()+' LANDS</p>' +
       (!deckList.length ? '<p style="font-size:13px;color:var(--mute);line-height:1.5">Nothing picked yet. '+
         'Tap cards in your pool to build a 40-card deck, then top it off with basics.</p>' : '') +
       deckList.map(c => '<button class="deckrow" data-uid="'+esc(c.uid)+'">' +
         '<span class="mark" style="color:'+(RCOL[c.rarity]||"#8B819D")+'">'+(MARK[c.rarity]||"•")+'</span>' +
         '<span class="nm">'+esc(c.name)+'</span>' +
         '<span style="font-family:var(--mono);font-size:11px;color:var(--mute)">×</span></button>').join("") +
-      '<div class="note" style="margin:18px 0 8px">BASIC LANDS</div>' +
+      '<div class="landbox"><div class="landhead"><span>Basic lands</span>' +
+        '<span class="landnum">'+basicTotal()+'</span></div>' +
       BASICS.map(b => '<div class="basicrow"><span class="dot" style="background:'+b[1]+'"></span>' +
         '<span style="flex:1">'+b[0]+'</span>' +
         '<button class="step" data-basic="'+b[0]+'" data-d="-1">−</button>' +
         '<span class="stepval">'+S.basics[b[0]]+'</span>' +
         '<button class="step" data-basic="'+b[0]+'" data-d="1">+</button></div>').join("") +
+      '<button class="btn-fill" id="fill">Fill to 40 by colour</button>' +
+      '<p class="note" style="margin:8px 0 0;font-size:11px">Weighted by the mana pips in your spells. ' +
+        'Tweak with − / + after.</p></div>' +
       '<div style="margin-top:18px;display:flex;flex-direction:column;gap:8px">' +
         '<button class="btn-copy" id="copy">Copy decklist</button>' +
         '<button class="btn-copy alt" id="copypool">Copy full pool ('+pool.length+')</button>' +
@@ -662,6 +714,7 @@ function renderTable(){
     render();
   }));
 
+  document.getElementById("fill").addEventListener("click", fillToForty);
   document.getElementById("copy").addEventListener("click", () => copyList("deck"));
   document.getElementById("copypool").addEventListener("click", () => copyList("pool"));
   document.getElementById("codes").addEventListener("change", e => {
