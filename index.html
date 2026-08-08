@@ -7,7 +7,6 @@
 <meta name="description" content="Simulate a Magic: The Gathering prerelease — pick a set, crack six packs, build a 40-card deck." />
 <title>Prerelease — Sealed Pool Simulator</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="preconnect" href="https://cards.scryfall.io" />
 <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@400;600;800&family=Karla:wght@400;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
@@ -31,6 +30,17 @@ header{border-bottom:1px solid var(--line);padding:18px 20px 14px;display:flex;a
   justify-content:space-between;gap:16px;flex-wrap:wrap}
 h1{font-family:var(--disp);font-size:48px;font-weight:800;margin:0;line-height:.9;text-transform:uppercase}
 .tag{font-family:var(--mono);font-size:12px;color:var(--mute);margin:6px 0 0;letter-spacing:.08em}
+/* The title doubles as the home control. It only behaves like a link once
+   there's somewhere to go back to — see homeLink.classList in render(). */
+.homelink{background:none;border:none;padding:0;margin:0;color:inherit;
+  display:block;text-align:left;cursor:default}
+.homelink h1{transition:color .18s}
+.homelink.live{cursor:pointer}
+.homelink.live h1{color:var(--stamp)}
+.homelink.live:hover h1{color:var(--parch)}
+.homelink.live::after{content:"\2190  BACK TO SETS";font-family:var(--mono);font-size:10px;
+  color:var(--mute);letter-spacing:.1em;display:block;margin-top:2px;opacity:0;transition:opacity .18s}
+.homelink.live:hover::after,.homelink.live:focus-visible::after{opacity:1}
 .setmeta{font-family:var(--mono);font-size:13px;color:var(--mute);text-align:right;letter-spacing:.08em}
 .setmeta b{color:var(--stamp);font-weight:400;display:block}
 main{padding:20px;max-width:1400px;margin:0 auto}
@@ -139,24 +149,6 @@ aside{background:var(--felt);border:1px solid var(--line);border-radius:8px;padd
 #lightbox.show{display:flex}
 #lightbox img{max-height:78vh;max-width:90vw;border-radius:12px}
 #lightbox p{font-family:var(--mono);font-size:13px;color:var(--mute);margin-top:12px;letter-spacing:.08em}
-  
-.icon-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 45px;
-  height: 45px;
-  background-color: #333;
-  color: white;
-  border-radius: 50%;
-  text-decoration: none;
-  font-size: 18px;
-}
-
-.icon-button:hover {
-  background-color: #555;
-}
-
 
 footer{font-family:var(--mono);font-size:11px;color:var(--mute);margin-top:48px;padding-top:16px;
   border-top:1px solid var(--line);line-height:1.8;letter-spacing:.06em}
@@ -170,10 +162,10 @@ footer{font-family:var(--mono);font-size:11px;color:var(--mute);margin-top:48px;
 
 <header>
   <div>
-  <h1>PRERELEASE ONLINE</h1>
-    <a href="index.html" class="icon-button" aria-label="Home">
-  <i class="fa-solid fa-house"></i>
-</a>
+    <button id="home" class="homelink" title="Back to set selection">
+      <h1>Prerelease Online</h1>
+    </button>
+    <p class="tag">OPEN SIX PACKS · BUILD FORTY · EXPORT</p>
   </div>
   <div class="setmeta" id="setmeta"></div>
 </header>
@@ -330,6 +322,21 @@ const S = {
 
 const app = document.getElementById("app");
 const setmeta = document.getElementById("setmeta");
+const homeLink = document.getElementById("home");
+
+function goHome(){
+  // Cracked packs can't be recovered — don't throw away a pool on a stray click.
+  if(S.deck.size || basicTotal()){
+    if(!window.confirm("Go back to set selection? Your current pool and deck will be cleared."))
+      return;
+  }
+  S.chosen = null; S.pools = null; S.packs = []; S.opened = []; S.promo = null;
+  S.deck = new Set(); S.basics = {Plains:0,Island:0,Swamp:0,Mountain:0,Forest:0};
+  S.loadError = null; S.approx = false; S.copyMsg = ""; S.showText = false;
+  S.query = ""; S.showAll = false;
+  render();
+}
+homeLink.addEventListener("click", () => { if(S.chosen) goHome(); });
 
 /* ---------- data loading ---------- */
 function clearCache(){
@@ -552,6 +559,7 @@ function render(){
     : "";
 
   const phase = !S.chosen ? "pick" : (S.packs.length ? "table" : "kit");
+  homeLink.classList.toggle("live", phase !== "pick");
   if(phase === "pick") renderPick();
   else if(phase === "kit") renderKit();
   else renderTable();
