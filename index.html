@@ -138,6 +138,20 @@ aside{background:var(--felt);border:1px solid var(--line);border-radius:8px;padd
 #lightbox.show{display:flex}
 #lightbox img{max-height:78vh;max-width:90vw;border-radius:12px}
 #lightbox p{font-family:var(--mono);font-size:13px;color:var(--mute);margin-top:12px;letter-spacing:.08em}
+  
+  .home-button {
+  display: inline-block;
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: white;
+  text-decoration: none;
+  border-radius: 5px;
+  font-family: sans-serif;
+  font-weight: bold;
+}
+
+.home-button:hover {
+  background-color: #0056b3;}
 
 footer{font-family:var(--mono);font-size:11px;color:var(--mute);margin-top:48px;padding-top:16px;
   border-top:1px solid var(--line);line-height:1.8;letter-spacing:.06em}
@@ -152,6 +166,7 @@ footer{font-family:var(--mono);font-size:11px;color:var(--mute);margin-top:48px;
 <header>
   <div>
   <h1>PRERELEASE ONLINE</h1>
+    <a href="index.html" class="home-button">Home</a>
   </div>
   <div class="setmeta" id="setmeta"></div>
 </header>
