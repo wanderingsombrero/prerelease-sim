@@ -165,7 +165,7 @@ footer{font-family:var(--mono);font-size:11px;color:var(--mute);margin-top:48px;
     <button id="home" class="homelink" title="Back to set selection">
       <h1>Prerelease</h1>
     </button>
-    <p class="tag">OPEN SIX PACKS · BUILD FORTY · EXPORT</p>
+    <p class="tag">SEALED POOL SIMULATOR · SIX PACKS · BUILD FORTY</p>
   </div>
   <div class="setmeta" id="setmeta"></div>
 </header>
@@ -243,6 +243,19 @@ function wildcardRarity(){
   return "common";
 }
 
+/* ---------- bonus sheets ----------
+   Modern Play Booster sets each have their OWN bonus sheet, not a shared one:
+   Avatar pulls from TLE (source material), other sets use SPG (Special Guests),
+   The List (PLST), or nothing at all. Rates differ too. Only add an entry here
+   if you've checked the set's official collection article — a wrong entry puts
+   cards in your pool that the real packs never contained.
+      code: Scryfall set code of the sheet
+      rate: chance it replaces a common in a given pack                        */
+const BONUS_SHEETS = {
+  tla: { code: "tle", rate: 1/26, label: "Source Material" }
+  // e.g. fin: { code: "fic", rate: ..., label: "..." },
+};
+
 /* Play Booster land slot: a basic land or a common nonbasic (dual/utility) land.
    The real split varies by set and isn't published — this is an even coin flip
    when a set has both, which is a guess, not a documented rate. */
@@ -272,7 +285,8 @@ function buildPack(p, era, packIndex){
 
   if(era === "play"){
     for(let i=1;i<=6;i++) add(drawC(), i);
-    if(p.list.length && roll() < 0.125) add(pick(p.list), 7, {special:"The List"});
+    if(p.list.length && roll() < (p.bonusRate || 0))
+      add(pick(p.list), 7, {special: p.bonusLabel || "Bonus sheet"});
     else add(drawC(), 7);
     for(let i=8;i<=10;i++) add(drawU(), i);
     add(rareOrMythic(0.14), 11);
@@ -379,8 +393,8 @@ async function loadSet(code){
   S.chosen = s; S.loadError = null; S.packs = []; S.opened = []; S.promo = null;
   S.deck = new Set(); S.basics = {Plains:0,Island:0,Swamp:0,Mountain:0,Forest:0};
 
-  const cached = cache.get("set3:"+code);
-  if(cached && cached.landBasic){ S.pools = cached; S.approx = false; render(); return; }
+  const cached = cache.get("set4:"+code);
+  if(cached && cached.landBasic && cached.bonusRate !== undefined){ S.pools = cached; S.approx = false; render(); return; }
 
   S.loading = true; S.loadCount = 0; render();
   try{
@@ -429,14 +443,18 @@ async function loadSet(code){
         "). Very new sets sometimes land before their rarities and booster flags do — " +
         "try Refresh data, or come back after release day.");
 
-    if(eraFor(s.released_at) === "play"){
+    const sheet = BONUS_SHEETS[code];
+    p.bonusRate  = sheet ? sheet.rate : 0;
+    p.bonusLabel = sheet ? sheet.label : "";
+    if(sheet){
       try{
-        const lst = await fetchAllPages(API + "/cards/search?q=" + encodeURIComponent("set:plst") + "&unique=prints");
-        p.list = lst.filter(c => c.lang === "en").map(slim);
-      }catch(e){ /* non-fatal — packs work without The List */ }
+        const bs = await fetchAllPages(API + "/cards/search?q=" +
+          encodeURIComponent("set:" + sheet.code) + "&unique=prints");
+        p.list = bs.filter(c => c.lang === "en").map(slim);
+      }catch(e){ /* non-fatal — packs just skip the bonus slot */ }
     }
     S.pools = p;
-    cache.set("set3:"+code, p);
+    cache.set("set4:"+code, p);
   }catch(e){ S.loadError = e.message; S.pools = null; }
   S.loading = false; render();
 }
@@ -657,7 +675,10 @@ function renderKit(){
       '<p class="note">COMMONS '+p.common.length+' · UNCOMMONS '+p.uncommon.length+
         ' · RARES '+p.rare.length+' · MYTHICS '+p.mythic.length+
         '<br>LAND SLOT: '+(p.landBasic||[]).length+' BASIC · '+(p.landCommon||[]).length+' COMMON NONBASIC'+
-        '<br>COLLATION: '+esc(ERA_LABEL[era].toUpperCase())+'</p>' +
+        '<br>COLLATION: '+esc(ERA_LABEL[era].toUpperCase())+
+        (era === "play" ? '<br>BONUS SHEET: '+(p.list.length ?
+          esc(p.bonusLabel.toUpperCase())+' — '+p.list.length+' CARDS, 1 IN '+Math.round(1/p.bonusRate)+' PACKS'
+          : 'NONE CONFIGURED FOR THIS SET') : '')+'</p>' +
       ((p.landBasic||[]).length + (p.landCommon||[]).length === 1 ?
         '<p class="note" style="color:var(--stamp)">⚠ ONLY ONE LAND AVAILABLE FOR THE LAND SLOT — ' +
         'EVERY PACK WILL SHOW THE SAME CARD THERE.</p>' : '') +
