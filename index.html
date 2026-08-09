@@ -163,9 +163,9 @@ footer{font-family:var(--mono);font-size:11px;color:var(--mute);margin-top:48px;
 <header>
   <div>
     <button id="home" class="homelink" title="Back to set selection">
-      <h1>Prerelease Online</h1>
+      <h1>Prerelease</h1>
     </button>
-    <p class="tag">OPEN SIX PACKS · BUILD FORTY · EXPORT</p>
+    <p class="tag">SEALED POOL SIMULATOR · SIX PACKS · BUILD FORTY</p>
   </div>
   <div class="setmeta" id="setmeta"></div>
 </header>
@@ -243,6 +243,17 @@ function wildcardRarity(){
   return "common";
 }
 
+/* Play Booster land slot: a basic land or a common nonbasic (dual/utility) land.
+   The real split varies by set and isn't published — this is an even coin flip
+   when a set has both, which is a guess, not a documented rate. */
+function landSlot(p, fallback){
+  const b = p.landBasic || [], d = p.landCommon || [];
+  if(b.length && d.length) return roll() < 0.5 ? pick(b) : pick(d);
+  if(d.length) return pick(d);
+  if(b.length) return pick(b);
+  return fallback();
+}
+
 function buildPack(p, era, packIndex){
   const cards = [];
   const drawC = drawer(p.common), drawU = drawer(p.uncommon);
@@ -265,7 +276,7 @@ function buildPack(p, era, packIndex){
     else add(drawC(), 7);
     for(let i=8;i<=10;i++) add(drawU(), i);
     add(rareOrMythic(0.14), 11);
-    add(p.land.length ? pick(p.land) : drawC(), 12, {foil: roll() < 0.2});
+    add(landSlot(p, drawC), 12, {foil: roll() < 0.2});
     add(wild(), 13);
     add(wild(), 14, {foil:true});
   } else if(era === "draft"){
@@ -273,7 +284,7 @@ function buildPack(p, era, packIndex){
     for(let i=11;i<=13;i++) add(drawU(), i);
     add(rareOrMythic(0.125), 14);
     if(roll() < 0.33) add(wild(), 15, {foil:true});
-    else if(p.land.length) add(pick(p.land), 15);
+    else if((p.landBasic||[]).length) add(pick(p.landBasic), 15);
   } else {
     for(let i=1;i<=11;i++) add(drawC(), i);
     for(let i=12;i<=14;i++) add(drawU(), i);
@@ -368,8 +379,8 @@ async function loadSet(code){
   S.chosen = s; S.loadError = null; S.packs = []; S.opened = []; S.promo = null;
   S.deck = new Set(); S.basics = {Plains:0,Island:0,Swamp:0,Mountain:0,Forest:0};
 
-  const cached = cache.get("set2:"+code);
-  if(cached){ S.pools = cached; S.approx = false; render(); return; }
+  const cached = cache.get("set3:"+code);
+  if(cached && cached.landBasic){ S.pools = cached; S.approx = false; render(); return; }
 
   S.loading = true; S.loadCount = 0; render();
   try{
@@ -405,7 +416,11 @@ async function loadSet(code){
       uncommon: ok.filter(c => c.rarity==="uncommon").map(slim),
       rare:     ok.filter(c => c.rarity==="rare").map(slim),
       mythic:   ok.filter(c => c.rarity==="mythic").map(slim),
-      land:     ok.filter(c => isLand(c) && (c.rarity==="common" || isBasic(c))).map(slim),
+      // Basics are pulled from the FULL set list, not the booster-filtered one:
+      // Scryfall commonly leaves booster:false on basic lands, which used to
+      // collapse this pool to whatever single common land survived the filter.
+      landBasic:  all.filter(c => notFluff(c) && isBasic(c)).map(slim),
+      landCommon: ok.filter(c => isLand(c) && !isBasic(c) && c.rarity === "common").map(slim),
       list:     []
     };
     if(!p.common.length || !p.uncommon.length || !(p.rare.length || p.mythic.length))
@@ -421,7 +436,7 @@ async function loadSet(code){
       }catch(e){ /* non-fatal — packs work without The List */ }
     }
     S.pools = p;
-    cache.set("set2:"+code, p);
+    cache.set("set3:"+code, p);
   }catch(e){ S.loadError = e.message; S.pools = null; }
   S.loading = false; render();
 }
@@ -641,7 +656,11 @@ function renderKit(){
     (p && !S.loading ?
       '<p class="note">COMMONS '+p.common.length+' · UNCOMMONS '+p.uncommon.length+
         ' · RARES '+p.rare.length+' · MYTHICS '+p.mythic.length+
+        '<br>LAND SLOT: '+(p.landBasic||[]).length+' BASIC · '+(p.landCommon||[]).length+' COMMON NONBASIC'+
         '<br>COLLATION: '+esc(ERA_LABEL[era].toUpperCase())+'</p>' +
+      ((p.landBasic||[]).length + (p.landCommon||[]).length === 1 ?
+        '<p class="note" style="color:var(--stamp)">⚠ ONLY ONE LAND AVAILABLE FOR THE LAND SLOT — ' +
+        'EVERY PACK WILL SHOW THE SAME CARD THERE.</p>' : '') +
       (S.chosen.released_at && S.chosen.released_at < EARLY_ERA ?
         '<p class="note" style="color:var(--stamp)">⚠ PRE-1995 SET — REAL PACKS FROM THIS ERA VARIED WIDELY ' +
         '(8-CARD PACKS, ODD RARITY SPLITS, SINGLE-RARITY PRINTINGS). THIS USES A 15-CARD APPROXIMATION.</p>' : '') +
