@@ -13,7 +13,7 @@
 <style>
 :root{
   --ink:#14101F; --felt:#1E1830; --raised:#282039; --stamp:#E8B34A;
-  --holo:#7BE0D6; --parch:#EDE6DC; --mute:#8B819D; --line:#3A3151; --bad:#E0685A;
+  --holo:#7BE0D6; --parch:#EDE6DC; --mute:#A79EBB; --line:#3A3151; --bad:#E0685A;
   --disp:'Big Shoulders Display',sans-serif;
   --body:'Karla',sans-serif;
   --mono:'Space Mono',monospace;
@@ -33,11 +33,13 @@ h1{font-family:var(--disp);font-size:48px;font-weight:800;margin:0;line-height:.
 /* The title doubles as the home control. It only behaves like a link once
    there's somewhere to go back to — see homeLink.classList in render(). */
 .homelink{background:none;border:none;padding:0;margin:0;color:inherit;
-  display:block;text-align:left;cursor:default}
-.homelink h1{transition:color .18s}
+  display:block;text-align:left;cursor:default;font:inherit}
+.sitetitle{margin:0}
+.homelink .title-text{font-family:var(--disp);font-size:48px;font-weight:800;line-height:.9;
+  text-transform:uppercase;transition:color .18s;display:block}
 .homelink.live{cursor:pointer}
-.homelink.live h1{color:var(--stamp)}
-.homelink.live:hover h1{color:var(--parch)}
+.homelink.live .title-text{color:var(--stamp)}
+.homelink.live:hover .title-text{color:var(--parch)}
 .homelink.live::after{content:"\2190  BACK TO SETS";font-family:var(--mono);font-size:10px;
   color:var(--mute);letter-spacing:.1em;display:block;margin-top:2px;opacity:0;transition:opacity .18s}
 .homelink.live:hover::after,.homelink.live:focus-visible::after{opacity:1}
@@ -85,7 +87,8 @@ input[type=text],input[type=number]{font-family:var(--body);background:var(--fel
 @media (max-width:820px){.table{grid-template-columns:1fr}}
 .poolgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--tile),1fr));gap:12px}
 
-.tile{position:relative;animation:flipin .42s cubic-bezier(.2,.8,.3,1) backwards}
+.tile{position:relative}
+.tile.deal{animation:flipin .42s cubic-bezier(.2,.8,.3,1) backwards}
 @keyframes flipin{from{transform:rotateY(-75deg) translateY(10px);opacity:0}to{transform:none;opacity:1}}
 .tile .card{display:block;width:100%;padding:0;border-radius:6px;cursor:pointer;background:var(--raised);
   overflow:hidden;border:2px solid transparent;position:relative}
@@ -114,7 +117,8 @@ aside{background:var(--felt);border:1px solid var(--line);border-radius:8px;padd
 .deckrow{width:100%;text-align:left;background:none;border:none;color:var(--parch);padding:7px 0;
   font-size:15px;cursor:pointer;display:flex;gap:8px;align-items:center;border-bottom:1px solid var(--raised);
   font-family:var(--body)}
-.deckrow:hover{color:var(--bad)}
+.deckrow:hover{color:var(--parch)}
+.deckrow:hover .mark-x{color:var(--bad)}
 .deckrow .mark{font-family:var(--mono);font-size:11px;width:12px}
 .deckrow .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .landbox{margin:20px 0 4px;padding:12px 14px;border:1px solid var(--stamp);border-radius:7px;
@@ -143,6 +147,13 @@ aside{background:var(--felt);border:1px solid var(--line);border-radius:8px;padd
 .sortbtn{font-family:var(--mono);font-size:12px;padding:4px 9px;border-radius:4px;cursor:pointer;
   background:transparent;color:var(--mute);border:1px solid var(--line)}
 .sortbtn.on{background:var(--stamp);color:var(--ink);border-color:var(--stamp)}
+.curve{display:flex;align-items:flex-end;gap:3px;height:60px;margin:8px 0 2px}
+.curve .cb{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px;min-width:0}
+.curve .cb i{display:block;width:100%;background:var(--stamp);border-radius:2px 2px 0 0;min-height:2px}
+.curve .cb em{font-family:var(--mono);font-style:normal;font-size:9px;color:var(--mute)}
+.piprow{display:flex;gap:12px;margin:8px 0 2px;flex-wrap:wrap}
+.piprow span{font-family:var(--mono);font-size:11px;color:var(--mute);display:flex;align-items:center;gap:4px}
+#lightbox:focus{outline:none}
 
 #lightbox{position:fixed;inset:0;background:rgba(10,7,16,.9);display:none;align-items:center;
   justify-content:center;z-index:50;padding:24px;text-align:center}
@@ -162,17 +173,19 @@ footer{font-family:var(--mono);font-size:11px;color:var(--mute);margin-top:48px;
 
 <header>
   <div>
-    <button id="home" class="homelink" title="Back to set selection">
-      <h1>Prerelease</h1>
-    </button>
-    <p class="tag">OPEN PACKS · BUILD FORTY · EXPORT</p>
+    <h1 class="sitetitle">
+      <button id="home" class="homelink" title="Back to set selection">
+        <span class="title-text">Prerelease Online</span>
+      </button>
+    </h1>
+    <p class="tag">OPEN SIX PACKS · BUILD FORTY · EXPORT</p>
   </div>
   <div class="setmeta" id="setmeta"></div>
 </header>
 
 <main id="app"></main>
 
-<div id="lightbox"><div><img id="lbimg" alt="" /><p id="lbcap"></p></div></div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-label="Card viewer" tabindex="-1"><div><img id="lbimg" alt="" /><p id="lbcap"></p><p class="note" style="margin-top:4px">← / → BROWSE · ESC CLOSE</p></div></div>
 
 <script>
 /* ============================================================
@@ -201,16 +214,42 @@ const cache = {
 async function fetchAllPages(url, onProgress){
   const out = []; let next = url;
   while(next){
-    const res = await fetch(next, { headers: HEADERS });
-    if(res.status === 404) break;
-    if(!res.ok) throw new Error("Scryfall returned " + res.status);
-    const data = await res.json();
+    let data = null;
+    for(let attempt = 0; ; attempt++){
+      const res = await fetch(next, { headers: HEADERS });
+      if(res.status === 404) return out;
+      if(res.status === 429 || res.status === 503){
+        if(attempt >= 4)
+          throw new Error("Scryfall is rate-limiting (HTTP " + res.status + ") — wait a moment and try Refresh data.");
+        const ra = parseFloat(res.headers.get("Retry-After"));
+        await sleep(ra > 0 ? ra * 1000 : 1500 * (attempt + 1));
+        continue;
+      }
+      if(!res.ok) throw new Error("Scryfall returned " + res.status);
+      data = await res.json();
+      break;
+    }
     out.push(...(data.data || []));
     if(onProgress) onProgress(out.length);
     next = data.has_more ? data.next_page : null;
     if(next) await sleep(120);           // stay under Scryfall's rate limit
   }
   return out;
+}
+
+async function fetchJSON(url){
+  for(let attempt = 0; ; attempt++){
+    const res = await fetch(url, { headers: HEADERS });
+    if(res.status === 429 || res.status === 503){
+      if(attempt >= 3)
+        throw new Error("Scryfall is rate-limiting (HTTP " + res.status + ") — wait a moment and try Refresh data.");
+      const ra = parseFloat(res.headers.get("Retry-After"));
+      await sleep(ra > 0 ? ra * 1000 : 1500 * (attempt + 1));
+      continue;
+    }
+    if(!res.ok) throw new Error("Scryfall returned " + res.status);
+    return res.json();
+  }
 }
 
 /* ---------- collation ---------- */
@@ -243,30 +282,6 @@ function wildcardRarity(){
   return "common";
 }
 
-/* ---------- bonus sheets ----------
-   Modern Play Booster sets each have their OWN bonus sheet, not a shared one:
-   Avatar pulls from TLE (source material), other sets use SPG (Special Guests),
-   The List (PLST), or nothing at all. Rates differ too. Only add an entry here
-   if you've checked the set's official collection article — a wrong entry puts
-   cards in your pool that the real packs never contained.
-      code: Scryfall set code of the sheet
-      rate: chance it replaces a common in a given pack                        */
-const BONUS_SHEETS = {
-  tla: { code: "tle", rate: 1/26, label: "Source Material" }
-  // e.g. fin: { code: "fic", rate: ..., label: "..." },
-};
-
-/* Play Booster land slot: a basic land or a common nonbasic (dual/utility) land.
-   The real split varies by set and isn't published — this is an even coin flip
-   when a set has both, which is a guess, not a documented rate. */
-function landSlot(p, fallback){
-  const b = p.landBasic || [], d = p.landCommon || [];
-  if(b.length && d.length) return roll() < 0.5 ? pick(b) : pick(d);
-  if(d.length) return pick(d);
-  if(b.length) return pick(b);
-  return fallback();
-}
-
 function buildPack(p, era, packIndex){
   const cards = [];
   const drawC = drawer(p.common), drawU = drawer(p.uncommon);
@@ -285,12 +300,11 @@ function buildPack(p, era, packIndex){
 
   if(era === "play"){
     for(let i=1;i<=6;i++) add(drawC(), i);
-    if(p.list.length && roll() < (p.bonusRate || 0))
-      add(pick(p.list), 7, {special: p.bonusLabel || "Bonus sheet"});
+    if(p.list.length && roll() < 0.125) add(pick(p.list), 7, {special:"The List"});
     else add(drawC(), 7);
     for(let i=8;i<=10;i++) add(drawU(), i);
     add(rareOrMythic(0.14), 11);
-    add(landSlot(p, drawC), 12, {foil: roll() < 0.2});
+    add(p.land.length ? pick(p.land) : drawC(), 12, {foil: roll() < 0.2});
     add(wild(), 13);
     add(wild(), 14, {foil:true});
   } else if(era === "draft"){
@@ -298,7 +312,8 @@ function buildPack(p, era, packIndex){
     for(let i=11;i<=13;i++) add(drawU(), i);
     add(rareOrMythic(0.125), 14);
     if(roll() < 0.33) add(wild(), 15, {foil:true});
-    else if((p.landBasic||[]).length) add(pick(p.landBasic), 15);
+    else if(p.land.length) add(pick(p.land), 15);
+    else add(drawC(), 15);
   } else {
     for(let i=1;i<=11;i++) add(drawC(), i);
     for(let i=12;i<=14;i++) add(drawU(), i);
@@ -342,7 +357,8 @@ const S = {
   pools:null, packs:[], opened:[], promo:null,
   includePromo:true, packCount:6,
   deck:new Set(), basics:{Plains:0,Island:0,Swamp:0,Mountain:0,Forest:0},
-  sort:"color", exportCodes:false, copyMsg:"", tile:200, approx:false, eraFilter:"all", showAll:false
+  sort:"color", deckSort:"name", exportCodes:false, copyMsg:"", tile:200, approx:false,
+  eraFilter:"all", showAll:false, dealt:null, showText:false
 };
 
 const app = document.getElementById("app");
@@ -357,7 +373,7 @@ function goHome(){
   }
   S.chosen = null; S.pools = null; S.packs = []; S.opened = []; S.promo = null;
   S.deck = new Set(); S.basics = {Plains:0,Island:0,Swamp:0,Mountain:0,Forest:0};
-  S.loadError = null; S.approx = false; S.copyMsg = ""; S.showText = false;
+  S.loadError = null; S.approx = false; S.copyMsg = ""; S.showText = false; S.dealt = null;
   S.query = ""; S.showAll = false;
   render();
 }
@@ -375,9 +391,7 @@ async function loadSets(force){
   const cached = force ? null : cache.get("sets");
   if(cached){ S.sets = cached; render(); return; }
   try{
-    const res = await fetch(API + "/sets", { headers: HEADERS });
-    if(!res.ok) throw new Error("Scryfall returned " + res.status);
-    const data = await res.json();
+    const data = await fetchJSON(API + "/sets");
     S.sets = (data.data||[])
       .filter(s => !s.digital && s.card_count >= 60 &&
         ["core","expansion","masters","draft_innovation","starter","funny"].indexOf(s.set_type) !== -1)
@@ -393,8 +407,8 @@ async function loadSet(code){
   S.chosen = s; S.loadError = null; S.packs = []; S.opened = []; S.promo = null;
   S.deck = new Set(); S.basics = {Plains:0,Island:0,Swamp:0,Mountain:0,Forest:0};
 
-  const cached = cache.get("set4:"+code);
-  if(cached && cached.landBasic && cached.bonusRate !== undefined){ S.pools = cached; S.approx = false; render(); return; }
+  const cached = cache.get("set2:"+code);
+  if(cached){ S.pools = cached.pools; S.approx = !!cached.approx; render(); return; }
 
   S.loading = true; S.loadCount = 0; render();
   try{
@@ -430,11 +444,7 @@ async function loadSet(code){
       uncommon: ok.filter(c => c.rarity==="uncommon").map(slim),
       rare:     ok.filter(c => c.rarity==="rare").map(slim),
       mythic:   ok.filter(c => c.rarity==="mythic").map(slim),
-      // Basics are pulled from the FULL set list, not the booster-filtered one:
-      // Scryfall commonly leaves booster:false on basic lands, which used to
-      // collapse this pool to whatever single common land survived the filter.
-      landBasic:  all.filter(c => notFluff(c) && isBasic(c)).map(slim),
-      landCommon: ok.filter(c => isLand(c) && !isBasic(c) && c.rarity === "common").map(slim),
+      land:     ok.filter(c => isLand(c) && (c.rarity==="common" || isBasic(c))).map(slim),
       list:     []
     };
     if(!p.common.length || !p.uncommon.length || !(p.rare.length || p.mythic.length))
@@ -443,18 +453,14 @@ async function loadSet(code){
         "). Very new sets sometimes land before their rarities and booster flags do — " +
         "try Refresh data, or come back after release day.");
 
-    const sheet = BONUS_SHEETS[code];
-    p.bonusRate  = sheet ? sheet.rate : 0;
-    p.bonusLabel = sheet ? sheet.label : "";
-    if(sheet){
+    if(eraFor(s.released_at) === "play"){
       try{
-        const bs = await fetchAllPages(API + "/cards/search?q=" +
-          encodeURIComponent("set:" + sheet.code) + "&unique=prints");
-        p.list = bs.filter(c => c.lang === "en").map(slim);
-      }catch(e){ /* non-fatal — packs just skip the bonus slot */ }
+        const lst = await fetchAllPages(API + "/cards/search?q=" + encodeURIComponent("set:plst") + "&unique=prints");
+        p.list = lst.filter(c => c.lang === "en").map(slim);
+      }catch(e){ /* non-fatal — packs work without The List */ }
     }
     S.pools = p;
-    cache.set("set4:"+code, p);
+    cache.set("set2:"+code, { pools:p, approx:S.approx });
   }catch(e){ S.loadError = e.message; S.pools = null; }
   S.loading = false; render();
 }
@@ -467,6 +473,7 @@ function openKit(){
   for(let i=0;i<S.packCount;i++) S.packs.push(buildPack(S.pools, era, i));
   S.opened = []; S.deck = new Set();
   S.promo = S.includePromo ? buildPromo(S.pools) : null;
+  S.dealt = null; S.copyMsg = ""; S.showText = false;
   render();
 }
 function poolCards(){
@@ -497,6 +504,32 @@ const deckCards  = () => poolCards().filter(c => S.deck.has(c.uid));
 const spellCount = () => deckCards().filter(c => !isLand(c)).length;
 const landCount  = () => deckCards().filter(c =>  isLand(c)).length + basicTotal();
 
+const PIP_COLOR = { W:"#F3E9C9", U:"#A9CCE8", B:"#B9B2C6", R:"#E5A18A", G:"#A5C9A1" };
+function statsHTML(){
+  const spells = deckCards().filter(c => !isLand(c));
+  const buckets = [0,0,0,0,0,0,0,0];
+  spells.forEach(c => { buckets[Math.min(c.cmc || 0, 7)]++; });
+  const mx = Math.max.apply(null, buckets.concat([1]));
+  const curve = buckets.map((n,i) =>
+    '<div class="cb" title="'+(i===7?"7+":i)+' CMC \u2014 '+n+'"><i style="height:'+Math.round(n/mx*44)+'px"></i><em>'+(i===7?"7+":i)+'</em></div>').join("");
+  const pips = { W:0, U:0, B:0, R:0, G:0 };
+  spells.forEach(c => {
+    (c.mana_cost || "").replace(/\{([^}]+)\}/g, (m, sym) => {
+      sym.split("/").forEach(x => { if(pips[x] !== undefined) pips[x]++; });
+      return m;
+    });
+  });
+  const pipKeys = Object.keys(pips).filter(k => pips[k] > 0);
+  const pipHTML = pipKeys.length
+    ? pipKeys.map(k => '<span><span class="dot" style="background:'+PIP_COLOR[k]+'"></span>'+pips[k]+'</span>').join("")
+    : '<span>NO COLOURED PIPS YET</span>';
+  return '<div style="margin:14px 0 2px"><div class="landhead" style="margin-bottom:2px">' +
+    '<span style="font-family:var(--disp);font-size:22px;font-weight:800;text-transform:uppercase">Curve</span>' +
+    '<span class="landnum" style="color:var(--mute)">'+spells.length+' SPELLS</span></div>' +
+    '<div class="curve">'+curve+'</div>' +
+    '<div class="piprow">'+pipHTML+'</div></div>';
+}
+
 /* Distribute the remaining slots across basics in proportion to the coloured
    mana pips in the deck's spells. Largest-remainder, so the total lands exactly. */
 const PIP_TO_BASIC = { W:"Plains", U:"Island", B:"Swamp", R:"Mountain", G:"Forest" };
@@ -526,7 +559,7 @@ function fillToForty(){
 
   BASICS.forEach(b => { S.basics[b[0]] = 0; });
   keys.forEach(k => { S.basics[PIP_TO_BASIC[k]] = out[k] || 0; });
-  S.copyMsg = "";
+  S.copyMsg = ""; S.showText = false;
   render();
 }
 
@@ -586,9 +619,13 @@ async function copyList(kind){
 
 /* ---------- render ---------- */
 function render(){
+  let restoreKey = null;
+  const ae = document.activeElement;
+  if(ae && ae.dataset && ae.dataset.k) restoreKey = ae.dataset.k;
   setmeta.innerHTML = S.chosen
     ? "<b>"+esc(S.chosen.name.toUpperCase())+"</b>"+esc(S.chosen.code.toUpperCase())+" · "+
-      esc(S.chosen.released_at||"")+" · "+esc(ERA_LABEL[eraFor(S.chosen.released_at)])
+      esc(S.chosen.released_at||"")+" · "+esc(ERA_LABEL[eraFor(S.chosen.released_at)])+
+      (S.approx ? ' · <span style="color:var(--stamp)">⚠ APPROX POOL</span>' : "")
     : "";
 
   const phase = !S.chosen ? "pick" : (S.packs.length ? "table" : "kit");
@@ -597,9 +634,14 @@ function render(){
   else if(phase === "kit") renderKit();
   else renderTable();
 
+  if(restoreKey){
+    const el = app.querySelector('[data-k="' + restoreKey.replace(/"/g, "") + '"]');
+    if(el) el.focus({preventScroll:true});
+  }
+
   app.insertAdjacentHTML("beforeend",
     '<footer>CARD DATA &amp; IMAGES FROM SCRYFALL. NOT AFFILIATED WITH WIZARDS OF THE COAST.<br>'+
-    'PACK CONTENTS ARE APPROXIMATED FROM PUBLISHED SLOT STRUCTURES — NOT OFFICIAL COLLATION. <a href="https://babyhuey.github.io/playtestproxy-fill" style="color: white;">PRINT WITH TCGPLAYTEST</a></footer>');
+    'PACK CONTENTS ARE APPROXIMATED FROM PUBLISHED SLOT STRUCTURES — NOT OFFICIAL COLLATION.</footer>');
 }
 
 const ERA_FILTERS = [
@@ -625,9 +667,9 @@ function renderPick(){
     (S.setsError ? '<p class="note bad">Couldn\'t reach Scryfall: '+esc(S.setsError)+'</p>' : '') +
     '<div class="row" style="margin-bottom:18px">' +
       '<input type="text" id="search" placeholder="Search sets by name or code…" value="'+esc(S.query)+'">' +
-      '<button class="btn-ghost" id="refresh" title="Set data is cached 24h — refresh if a brand-new set is missing">Refresh data</button></div>' +
+      '<button class="btn-ghost" id="refresh" data-k="refresh" title="Set data is cached 24h — refresh if a brand-new set is missing">Refresh data</button></div>' +
     '<div class="row" style="gap:6px;margin-bottom:14px">' +
-      ERA_FILTERS.map(f => '<button class="sortbtn'+(S.eraFilter===f[0]?" on":"")+'" data-era="'+f[0]+'">'+
+      ERA_FILTERS.map(f => '<button class="sortbtn'+(S.eraFilter===f[0]?" on":"")+'" data-era="'+f[0]+'" data-k="era:'+f[0]+'">'+
         f[1]+'</button>').join("") + '</div>' +
     (!S.sets.length && !S.setsError ? '<p class="note">Loading sets…</p>'
       : '') +
@@ -635,9 +677,9 @@ function renderPick(){
       '<p class="note">SHOWING '+shown.length+' OF '+list.length+
       (S.eraFilter!=="all"?" IN THIS ERA":" SETS")+
       (hidden > 0 ? ' · SEARCH BY NAME OR CODE FOR THE OTHER '+hidden+
-        ', OR <button class="linkbtn" id="showall">SHOW ALL</button>' : '')+'</p>') +
+        ', OR <button class="linkbtn" id="showall" data-k="showall">SHOW ALL</button>' : '')+'</p>') +
     '<div class="setgrid">' + shown.map(s =>
-      '<button class="setbtn" data-code="'+esc(s.code)+'">' +
+      '<button class="setbtn" data-code="'+esc(s.code)+'" data-k="set:'+esc(s.code)+'">' +
         (s.icon_svg_uri ? '<img src="'+esc(s.icon_svg_uri)+'" alt="" loading="lazy">' : '') +
         '<span style="min-width:0"><span class="nm">'+esc(s.name)+'</span>' +
         '<span class="cd">'+esc(s.code.toUpperCase())+' · '+esc(s.released_at||"")+' · '+
@@ -652,7 +694,7 @@ function renderPick(){
     const n = document.getElementById("search");
     n.focus(); n.setSelectionRange(pos,pos);
   });
-  Array.prototype.forEach.call(app.querySelectorAll("[data-era]"), b =>
+  app.querySelectorAll("[data-era]").forEach(b =>
     b.addEventListener("click", () => { S.eraFilter = b.dataset.era; S.showAll = false; render(); }));
   const sa = document.getElementById("showall");
   if(sa) sa.addEventListener("click", () => { S.showAll = true; render(); });
@@ -661,7 +703,7 @@ function renderPick(){
     S.sets = []; S.setsError = null; render();
     loadSets(true);
   });
-  Array.prototype.forEach.call(app.querySelectorAll(".setbtn"), b =>
+  app.querySelectorAll(".setbtn").forEach(b =>
     b.addEventListener("click", () => loadSet(b.dataset.code)));
 }
 
@@ -669,19 +711,12 @@ function renderKit(){
   const p = S.pools, era = eraFor(S.chosen.released_at);
   app.innerHTML =
     '<div class="eyebrow">02 — Your kit</div>' +
-    (S.loading ? '<p class="note">Pulling '+esc(S.chosen.name)+' from Scryfall… '+S.loadCount+' cards</p>' : '') +
+    (S.loading ? '<p class="note" aria-live="polite">Pulling '+esc(S.chosen.name)+' from Scryfall… '+S.loadCount+' cards</p>' : '') +
     (S.loadError ? '<p class="note bad">'+esc(S.loadError)+'</p>' : '') +
     (p && !S.loading ?
       '<p class="note">COMMONS '+p.common.length+' · UNCOMMONS '+p.uncommon.length+
         ' · RARES '+p.rare.length+' · MYTHICS '+p.mythic.length+
-        '<br>LAND SLOT: '+(p.landBasic||[]).length+' BASIC · '+(p.landCommon||[]).length+' COMMON NONBASIC'+
-        '<br>COLLATION: '+esc(ERA_LABEL[era].toUpperCase())+
-        (era === "play" ? '<br>BONUS SHEET: '+(p.list.length ?
-          esc(p.bonusLabel.toUpperCase())+' — '+p.list.length+' CARDS, 1 IN '+Math.round(1/p.bonusRate)+' PACKS'
-          : 'NONE CONFIGURED FOR THIS SET') : '')+'</p>' +
-      ((p.landBasic||[]).length + (p.landCommon||[]).length === 1 ?
-        '<p class="note" style="color:var(--stamp)">⚠ ONLY ONE LAND AVAILABLE FOR THE LAND SLOT — ' +
-        'EVERY PACK WILL SHOW THE SAME CARD THERE.</p>' : '') +
+        '<br>COLLATION: '+esc(ERA_LABEL[era].toUpperCase())+'</p>' +
       (S.chosen.released_at && S.chosen.released_at < EARLY_ERA ?
         '<p class="note" style="color:var(--stamp)">⚠ PRE-1995 SET — REAL PACKS FROM THIS ERA VARIED WIDELY ' +
         '(8-CARD PACKS, ODD RARITY SPLITS, SINGLE-RARITY PRINTINGS). THIS USES A 15-CARD APPROXIMATION.</p>' : '') +
@@ -690,12 +725,12 @@ function renderKit(){
         'RE-PULL AFTER RELEASE DAY FOR ACCURATE PACKS.</p>' : '') +
       '<div class="row" style="margin-bottom:24px;gap:22px">' +
         '<label class="note" style="margin:0;display:flex;align-items:center;gap:8px">PACKS ' +
-          '<input type="number" id="pc" min="1" max="12" value="'+S.packCount+'" style="width:64px;padding:6px 8px;font-family:var(--mono)"></label>' +
+          '<input type="number" id="pc" data-k="pc" min="1" max="12" value="'+S.packCount+'" style="width:64px;padding:6px 8px;font-family:var(--mono)"></label>' +
         '<label class="note" style="margin:0;display:flex;align-items:center;gap:8px;cursor:pointer">' +
-          '<input type="checkbox" id="promo" '+(S.includePromo?"checked":"")+'> STAMPED FOIL PROMO</label>' +
+          '<input type="checkbox" id="promo" data-k="promo" '+(S.includePromo?"checked":"")+'> STAMPED FOIL PROMO</label>' +
       '</div>' +
-      '<div class="row"><button class="btn-primary" id="crack">Crack the kit</button>' +
-        '<button class="btn-ghost" id="back">Different set</button></div>'
+      '<div class="row"><button class="btn-primary" id="crack" data-k="crack">Crack the kit</button>' +
+        '<button class="btn-ghost" id="back" data-k="back">Different set</button></div>'
     : (S.loadError ? '<button class="btn-ghost" id="back">Back to sets</button>' : ''));
 
   const pc = document.getElementById("pc");
@@ -708,116 +743,141 @@ function renderKit(){
   if(bk) bk.addEventListener("click", () => { S.chosen=null; S.pools=null; S.loadError=null; render(); });
 }
 
-function tileHTML(c, i){
+function tileHTML(c, i, dealing){
   const src = imgOf(c,"normal");
   const sel = S.deck.has(c.uid);
-  return '<div class="tile'+(sel?" sel":"")+'" style="animation-delay:'+(Math.min(i,20)*22)+'ms">' +
-    '<button class="card'+(c.foil?" foil":"")+'" data-uid="'+esc(c.uid)+'" title="'+esc(c.name)+'">' +
+  const dealingThis = dealing && (dealing === "all" || c.uid.indexOf(dealing + "-") === 0 || c.uid.indexOf("promo-") === 0);
+  return '<div class="tile'+(sel?" sel":"")+(dealingThis?" deal":"")+'" style="animation-delay:'+(Math.min(i,20)*22)+'ms">' +
+    '<button class="card'+(c.foil?" foil":"")+'" data-uid="'+esc(c.uid)+'" data-k="card:'+esc(c.uid)+'" title="'+esc(c.name)+'">' +
       (src ? '<img src="'+esc(src)+'" alt="'+esc(c.name)+'" loading="lazy">'
            : '<span style="display:block;padding:12px;font-size:12px;min-height:150px">'+esc(c.name)+'</span>') +
     '</button>' +
     (c.special ? '<span class="badge">'+esc(c.special)+'</span>' : '') +
     '<div class="meta"><span style="color:'+(RCOL[c.rarity]||"#8B819D")+'">' +
       (c.slot ? "S"+pad(c.slot) : "PROMO")+' · '+(MARK[c.rarity]||"•")+'</span>' +
-      '<span style="display:flex;gap:5px;align-items:center">' +
+    '<span style="display:flex;gap:5px;align-items:center">' +
+      (c.card_faces && !c.image_uris ? '<span style="color:var(--mute)">DFC</span>' : '') +
       (c.foil ? '<span style="color:var(--holo)">FOIL</span>' : '') +
-      '<button class="zoom" data-zoom="'+esc(c.uid)+'">ZOOM</button></span></div></div>';
+      '<button class="zoom" data-zoom="'+esc(c.uid)+'" data-k="zoom:'+esc(c.uid)+'">ZOOM</button></span></div></div>';
 }
 
 function renderTable(){
+  const dealing = S.dealt; S.dealt = null;
   const pool = sortedPool(), total = deckTotal(), ok = total >= 40;
   const deckList = deckCards();
+  if(S.deckSort === "name") deckList.sort((a,b) => a.name.localeCompare(b.name));
+  else deckList.sort((a,b) => (a.cmc||0)-(b.cmc||0) || a.name.localeCompare(b.name));
 
   app.innerHTML =
     '<div class="row" style="margin-bottom:8px"><span class="eyebrow" style="margin:0">03 — Open</span>' +
       '<span class="note" style="margin:0">'+S.opened.length+'/'+S.packs.length+' OPENED</span></div>' +
     '<div class="row" style="gap:8px;margin-bottom:22px">' +
-      S.packs.map((_,i) => '<button class="pack" data-pack="'+i+'"'+(S.opened.indexOf(i)!==-1?" disabled":"")+'>' +
+      S.packs.map((_,i) => '<button class="pack" data-pack="'+i+'" data-k="pack:'+i+'"'+(S.opened.indexOf(i)!==-1?" disabled":"")+'>' +
         pad(i+1)+'/'+pad(S.packs.length)+'</button>').join("") +
-      (S.opened.length < S.packs.length ? '<button class="btn-ghost" id="openall">Open all</button>' : '') +
+      (S.opened.length < S.packs.length ? '<button class="btn-ghost" id="openall" data-k="openall">Open all</button>' : '') +
     '</div>' +
     (!S.opened.length ? '' :
     '<div class="table"><div style="min-width:0">' +
       '<div class="row" style="justify-content:space-between;margin-bottom:10px">' +
         '<span class="note" style="margin:0">POOL '+pool.length+' · TAP TO ADD</span>' +
         '<span style="display:flex;gap:6px">' +
-        ["color","rarity","cmc"].map(m => '<button class="sortbtn'+(S.sort===m?" on":"")+'" data-sort="'+m+'">'+
+        ["color","rarity","cmc"].map(m => '<button class="sortbtn'+(S.sort===m?" on":"")+'" data-sort="'+m+'" data-k="sort:'+m+'">'+
           m.toUpperCase()+'</button>').join("") +
         '<span style="width:10px"></span>' +
-        [["M",160],["L",200],["XL",260]].map(t => '<button class="sortbtn'+(S.tile===t[1]?" on":"")+'" data-tile="'+t[1]+'">'+
+        [["M",160],["L",200],["XL",260]].map(t => '<button class="sortbtn'+(S.tile===t[1]?" on":"")+'" data-tile="'+t[1]+'" data-k="tile:'+t[1]+'">'+
           t[0]+'</button>').join("") + '</span></div>' +
-      '<div class="poolgrid">' + pool.map(tileHTML).join("") + '</div></div>' +
+      '<div class="poolgrid">' + pool.map((c,i) => tileHTML(c,i,dealing)).join("") + '</div></div>' +
 
     '<aside><div class="decktop"><span>Deck</span>' +
-      '<span class="count'+(ok?" ok":"")+'">'+total+'/40</span></div>' +
+      '<span class="count'+(ok?" ok":"")+'" aria-live="polite">'+total+'/40</span></div>' +
       '<div class="bar"><div class="'+(ok?"ok":"")+'" style="width:'+Math.min(100,total/40*100)+'%"></div></div>' +
       '<p class="note" style="margin:0 0 14px">'+(ok?"LEGAL — 40 CARD MINIMUM MET":(40-total)+" MORE TO GO")+
         ' · '+spellCount()+' SPELLS · '+landCount()+' LANDS</p>' +
+      '<div style="display:flex;gap:6px;margin:0 0 6px">' +
+        '<button class="sortbtn'+(S.deckSort==="name"?" on":"")+'" data-dsort="name" data-k="dsort:name">A–Z</button>' +
+        '<button class="sortbtn'+(S.deckSort==="cmc"?" on":"")+'" data-dsort="cmc" data-k="dsort:cmc">CMC</button></div>' +
       (!deckList.length ? '<p style="font-size:13px;color:var(--mute);line-height:1.5">Nothing picked yet. '+
         'Tap cards in your pool to build a 40-card deck, then top it off with basics.</p>' : '') +
-      deckList.map(c => '<button class="deckrow" data-uid="'+esc(c.uid)+'">' +
+      deckList.map(c => '<button class="deckrow" data-uid="'+esc(c.uid)+'" data-k="deckrow:'+esc(c.uid)+'">' +
         '<span class="mark" style="color:'+(RCOL[c.rarity]||"#8B819D")+'">'+(MARK[c.rarity]||"•")+'</span>' +
         '<span class="nm">'+esc(c.name)+'</span>' +
-        '<span style="font-family:var(--mono);font-size:11px;color:var(--mute)">×</span></button>').join("") +
+        '<span class="mark-x" style="font-family:var(--mono);font-size:11px;color:var(--mute)">×</span></button>').join("") +
+      statsHTML() +
       '<div class="landbox"><div class="landhead"><span>Basic lands</span>' +
         '<span class="landnum">'+basicTotal()+'</span></div>' +
       BASICS.map(b => '<div class="basicrow"><span class="dot" style="background:'+b[1]+'"></span>' +
         '<span style="flex:1">'+b[0]+'</span>' +
-        '<button class="step" data-basic="'+b[0]+'" data-d="-1">−</button>' +
+        '<button class="step" data-basic="'+b[0]+'" data-d="-1" data-k="basic:'+b[0]+':-1">−</button>' +
         '<span class="stepval">'+S.basics[b[0]]+'</span>' +
-        '<button class="step" data-basic="'+b[0]+'" data-d="1">+</button></div>').join("") +
-      '<button class="btn-fill" id="fill">Fill to 40 by colour</button>' +
+        '<button class="step" data-basic="'+b[0]+'" data-d="1" data-k="basic:'+b[0]+':1">+</button></div>').join("") +
+      '<button class="btn-fill" id="fill" data-k="fill">Fill to 40 by colour</button>' +
+      '<button class="btn-ghost" id="addlands" data-k="addlands" style="width:100%;margin-top:8px">Add all lands from pool</button>' +
       '<p class="note" style="margin:8px 0 0;font-size:11px">Weighted by the mana pips in your spells. ' +
         'Tweak with − / + after.</p></div>' +
       '<div style="margin-top:18px;display:flex;flex-direction:column;gap:8px">' +
-        '<button class="btn-copy" id="copy">Copy decklist</button>' +
-        '<button class="btn-copy alt" id="copypool">Copy full pool ('+pool.length+')</button>' +
+        '<button class="btn-copy" id="copy" data-k="copy">Copy decklist</button>' +
+        '<button class="btn-copy alt" id="copypool" data-k="copypool">Copy full pool ('+pool.length+')</button>' +
         '<label class="note" style="margin:0;display:flex;align-items:center;gap:7px;cursor:pointer">' +
-          '<input type="checkbox" id="codes" '+(S.exportCodes?"checked":"")+'> INCLUDE SET CODE + NUMBER</label>' +
+          '<input type="checkbox" id="codes" data-k="codes" '+(S.exportCodes?"checked":"")+'> INCLUDE SET CODE + NUMBER</label>' +
         (S.copyMsg ? '<p class="note" style="margin:0;color:'+
-          (S.copyMsg.indexOf("COPIED")===0?"var(--holo)":"var(--stamp)")+'">'+esc(S.copyMsg)+'</p>' : '') +
-        (S.showText ? '<textarea id="fallback" readonly>'+
+          (S.copyMsg.indexOf("COPIED")===0?"var(--holo)":"var(--stamp)")+'" aria-live="polite">'+esc(S.copyMsg)+'</p>' : '') +
+        (S.showText && S.copyMsg.indexOf("COPY BLOCKED") === 0 ? '<textarea id="fallback" readonly>'+
           esc(S.fallbackKind === "pool" ? poolText() : decklistText())+'</textarea>' : '') +
-        '<button class="btn-ghost" id="clear">Clear deck</button>' +
-        '<button class="btn-ghost" id="repool">New pool, same set</button>' +
-        '<button class="btn-ghost" id="newset">Different set</button></div>' +
+        '<button class="btn-ghost" id="clear" data-k="clear">Clear deck</button>' +
+        '<button class="btn-ghost" id="repool" data-k="repool">New pool, same set</button>' +
+        '<button class="btn-ghost" id="newset" data-k="newset">Different set</button></div>' +
     '</aside></div>');
 
-  const each = (sel, fn) => Array.prototype.forEach.call(app.querySelectorAll(sel), fn);
+  const each = (sel, fn) => app.querySelectorAll(sel).forEach(fn);
 
   each("[data-pack]", b => b.addEventListener("click", () => {
-    const i = +b.dataset.pack; if(S.opened.indexOf(i) === -1) S.opened.push(i); render();
+    const i = +b.dataset.pack;
+    if(S.opened.indexOf(i) === -1){ S.opened.push(i); S.dealt = i; }
+    S.copyMsg = ""; S.showText = false;
+    render();
   }));
   const oa = document.getElementById("openall");
-  if(oa) oa.addEventListener("click", () => { S.opened = S.packs.map((_,i)=>i); render(); });
+  if(oa) oa.addEventListener("click", () => {
+    S.opened = S.packs.map((_,i)=>i); S.dealt = "all"; S.copyMsg = ""; S.showText = false; render();
+  });
 
-  each("[data-sort]", b => b.addEventListener("click", () => { S.sort = b.dataset.sort; render(); }));
+  each("[data-sort]", b => b.addEventListener("click", () => { S.sort = b.dataset.sort; S.copyMsg = ""; S.showText = false; render(); }));
+  each("[data-dsort]", b => b.addEventListener("click", () => { S.deckSort = b.dataset.dsort; S.copyMsg = ""; S.showText = false; render(); }));
   each("[data-tile]", b => b.addEventListener("click", () => {
     S.tile = +b.dataset.tile;
     document.documentElement.style.setProperty("--tile", S.tile + "px");
+    S.copyMsg = ""; S.showText = false;
     render();
   }));
 
   each(".card[data-uid]", b => b.addEventListener("click", () => {
     const u = b.dataset.uid;
     if(S.deck.has(u)) S.deck.delete(u); else S.deck.add(u);
+    S.copyMsg = ""; S.showText = false;
     render();
   }));
   each(".deckrow[data-uid]", b => b.addEventListener("click", () => {
-    S.deck.delete(b.dataset.uid); render();
+    S.deck.delete(b.dataset.uid); S.copyMsg = ""; S.showText = false; render();
   }));
   each("[data-zoom]", b => b.addEventListener("click", e => {
     e.stopPropagation();
-    const c = poolCards().filter(x => x.uid === b.dataset.zoom)[0];
-    if(c) showLightbox(c);
+    const list = poolCards();
+    const idx = list.findIndex(x => x.uid === b.dataset.zoom);
+    if(idx !== -1){ lbReturnFocus = b; showLightbox(list[idx], list, idx); }
   }));
   each("[data-basic]", b => b.addEventListener("click", () => {
     const n = b.dataset.basic;
     S.basics[n] = Math.max(0, S.basics[n] + (+b.dataset.d));
+    S.copyMsg = ""; S.showText = false;
     render();
   }));
 
   document.getElementById("fill").addEventListener("click", fillToForty);
+  const addl = document.getElementById("addlands");
+  if(addl) addl.addEventListener("click", () => {
+    poolCards().forEach(c => { if(isLand(c) && !isBasic(c)) S.deck.add(c.uid); });
+    S.copyMsg = ""; S.showText = false; render();
+  });
   document.getElementById("copy").addEventListener("click", () => copyList("deck"));
   document.getElementById("copypool").addEventListener("click", () => copyList("pool"));
   document.getElementById("codes").addEventListener("change", e => {
@@ -827,25 +887,49 @@ function renderTable(){
   if(fb){ fb.focus(); fb.select(); }
 
   document.getElementById("clear").addEventListener("click", () => {
-    S.deck = new Set(); S.basics = {Plains:0,Island:0,Swamp:0,Mountain:0,Forest:0}; render();
+    S.deck = new Set(); S.basics = {Plains:0,Island:0,Swamp:0,Mountain:0,Forest:0};
+    S.copyMsg = ""; S.showText = false; render();
   });
   document.getElementById("repool").addEventListener("click", openKit);
   document.getElementById("newset").addEventListener("click", () => {
-    S.chosen = null; S.pools = null; S.packs = []; render();
+    S.chosen = null; S.pools = null; S.packs = [];
+    S.copyMsg = ""; S.showText = false; S.dealt = null; render();
   });
 }
 
 /* ---------- lightbox ---------- */
 const lb = document.getElementById("lightbox");
-function showLightbox(c){
-  document.getElementById("lbimg").src = imgOf(c,"large") || imgOf(c,"normal") || "";
+let lbList = [], lbIndex = 0, lbReturnFocus = null;
+function showLightbox(c, list, idx){
+  if(list) lbList = list;
+  if(idx !== undefined && idx !== null) lbIndex = idx;
+  const cur = lbList.length ? lbList[lbIndex] : c;
+  if(!cur) return;
+  const im = document.getElementById("lbimg");
+  im.src = imgOf(cur,"large") || imgOf(cur,"normal") || "";
+  im.alt = cur.name;
   document.getElementById("lbcap").textContent =
-    c.name.toUpperCase()+" · "+(c.set||"").toUpperCase()+" "+(c.collector_number||"")+
-    " · "+(MARK[c.rarity]||"•")+(c.foil?" · FOIL":"");
+    cur.name.toUpperCase()+" · "+(cur.set||"").toUpperCase()+" "+(cur.collector_number||"")+
+    " · "+(MARK[cur.rarity]||"•")+(cur.foil?" · FOIL":"");
   lb.classList.add("show");
+  lb.focus({preventScroll:true});
 }
-lb.addEventListener("click", () => lb.classList.remove("show"));
-document.addEventListener("keydown", e => { if(e.key === "Escape") lb.classList.remove("show"); });
+function stepLightbox(d){
+  if(!lbList.length) return;
+  lbIndex = (lbIndex + d + lbList.length) % lbList.length;
+  showLightbox(lbList[lbIndex]);
+}
+function closeLightbox(){
+  lb.classList.remove("show");
+  if(lbReturnFocus && document.contains(lbReturnFocus)) lbReturnFocus.focus({preventScroll:true});
+}
+lb.addEventListener("click", closeLightbox);
+document.addEventListener("keydown", e => {
+  if(!lb.classList.contains("show")) return;
+  if(e.key === "Escape") closeLightbox();
+  else if(e.key === "ArrowLeft") stepLightbox(-1);
+  else if(e.key === "ArrowRight") stepLightbox(1);
+});
 
 /* ---------- go ---------- */
 render();
